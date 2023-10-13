@@ -98,29 +98,54 @@ func (st *Store) TransferTx(ctx context.Context, args TransferTxParams) (Transfe
 
 		// Update accounts balance.
 
-		// Update account1
-
 		amountDec, err := decimal.NewFromString(args.Amount)
 		if err != nil {
 			return err
 		}
 
-		txResult.FromAccount, err = q.AddAccountBalance(context.Background(), AddAccountBalanceParams{
-			ID:     args.FromAccountID,
-			Amount: "-" + amountDec.String(),
-		})
+		// Here let's first update the account with the smaller ID.
+		// This is for predictable order to avoid deadlocks.
+		if args.FromAccountID < args.ToAccountID {
 
-		if err != nil {
-			return err
-		}
+			// Update account1 First
+			txResult.FromAccount, err = q.AddAccountBalance(context.Background(), AddAccountBalanceParams{
+				ID:     args.FromAccountID,
+				Amount: "-" + amountDec.String(),
+			})
 
-		// Update account2
-		txResult.ToAccount, err = q.AddAccountBalance(context.Background(), AddAccountBalanceParams{
-			ID:     args.ToAccountID,
-			Amount: amountDec.String(),
-		})
-		if err != nil {
-			return err
+			if err != nil {
+				return err
+			}
+
+			// Update account2
+			txResult.ToAccount, err = q.AddAccountBalance(context.Background(), AddAccountBalanceParams{
+				ID:     args.ToAccountID,
+				Amount: amountDec.String(),
+			})
+			if err != nil {
+				return err
+			}
+		} else {
+
+			// Update account2 First
+			txResult.ToAccount, err = q.AddAccountBalance(context.Background(), AddAccountBalanceParams{
+				ID:     args.ToAccountID,
+				Amount: amountDec.String(),
+			})
+			if err != nil {
+				return err
+			}
+
+			// Update account1
+			txResult.FromAccount, err = q.AddAccountBalance(context.Background(), AddAccountBalanceParams{
+				ID:     args.FromAccountID,
+				Amount: "-" + amountDec.String(),
+			})
+
+			if err != nil {
+				return err
+			}
+
 		}
 
 		return nil
