@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+
+	"github.com/shopspring/decimal"
 )
 
 // Store extends the functionalities of Queries and adds the capability of running SQL transactions
@@ -94,7 +96,32 @@ func (st *Store) TransferTx(ctx context.Context, args TransferTxParams) (Transfe
 			return err
 		}
 
-		// TODO: update accounts balance.
+		// Update accounts balance.
+
+		// Update account1
+
+		amountDec, err := decimal.NewFromString(args.Amount)
+		if err != nil {
+			return err
+		}
+
+		txResult.FromAccount, err = q.AddAccountBalance(context.Background(), AddAccountBalanceParams{
+			ID:     args.FromAccountID,
+			Amount: "-" + amountDec.String(),
+		})
+
+		if err != nil {
+			return err
+		}
+
+		// Update account2
+		txResult.ToAccount, err = q.AddAccountBalance(context.Background(), AddAccountBalanceParams{
+			ID:     args.ToAccountID,
+			Amount: amountDec.String(),
+		})
+		if err != nil {
+			return err
+		}
 
 		return nil
 	}
