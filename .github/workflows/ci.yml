@@ -10,11 +10,8 @@ on:
     branches: [ "main" ]
 
 jobs:
-  postgres-job:
-    # You must use a Linux environment when using service containers or container jobs
+  Test:
     runs-on: ubuntu-latest
-
-    # Service containers to run with `postgres-job`
     services:
       # Label used to access the service container
       postgres12:
@@ -33,21 +30,19 @@ jobs:
         ports:
           # Maps tcp port 5432 on service container to the host
           - 5432:5432
-  build:
-    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
         go-version: '1.20'
-    - name: install migrate
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - name: Install golang migrate
       run: |
         curl -L https://github.com/golang-migrate/migrate/releases/download/v4.16.2/migrate.linux-amd64.tar.gz | tar xvz
         sudo mv migrate /usr/bin/
         which migrate
-    - name:
+    - name: Run migration
       run: make migrateup
     - name: Test
       run: make test
