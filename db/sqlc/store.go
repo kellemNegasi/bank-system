@@ -150,10 +150,5 @@ func transferMoney(
 		Amount: amount2,
 		ID:     accountID2,
 	})
-
-	if err != nil {
-		return
-	}
-
 	return
 }
