@@ -10,7 +10,29 @@ on:
     branches: [ "main" ]
 
 jobs:
+  postgres-job:
+    # You must use a Linux environment when using service containers or container jobs
+    runs-on: ubuntu-latest
 
+    # Service containers to run with `postgres-job`
+    services:
+      # Label used to access the service container
+      postgres12:
+        # Docker Hub image
+        image: postgres:12-alpine
+        # Provide the password for postgres
+        env:
+          POSTGRES_PASSWORD: secret
+          POSTGRES_USER: root
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          # Maps tcp port 5432 on service container to the host
+          - 5432:5432
   build:
     runs-on: ubuntu-latest
     steps:
@@ -25,5 +47,7 @@ jobs:
         curl -L https://github.com/golang-migrate/migrate/releases/download/v4.16.2/migrate.linux-amd64.tar.gz | tar xvz
         sudo mv migrate /usr/bin/
         which migrate
+    - name:
+      run: make migrateup
     - name: Test
       run: make test
