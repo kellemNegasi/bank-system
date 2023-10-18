@@ -24,6 +24,13 @@ func (server *Server) createTransfer(ctx *gin.Context) {
 		return
 	}
 
+	// Check for self transfer
+	if req.FromAccountID == req.ToAccountID {
+		err := fmt.Errorf("self transfer is prohibited! from account %d to account %d", req.FromAccountID, req.ToAccountID)
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
 	if !server.isValidAccount(ctx, req.FromAccountID, req.Currency, true, req.Amount) {
 		return
 	}
