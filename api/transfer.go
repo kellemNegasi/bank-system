@@ -13,7 +13,7 @@ import (
 type createTransferRequest struct {
 	FromAccountID int64            `json:"from_account_id" binding:"required"`
 	ToAccountID   int64            `json:"to_account_id" binding:"required"`
-	Currency      string           `json:"currency" binding:"required,oneof=USD EUR GBP"`
+	Currency      string           `json:"currency" binding:"required,currency"`
 	Amount        *decimal.Decimal `json:"amount" binding:"required"`
 }
 
