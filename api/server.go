@@ -7,12 +7,12 @@ import (
 
 // Server represents the HTTP server that serves client requests.
 type Server struct {
-	store  *db.Store
+	store  db.Store
 	router *gin.Engine
 }
 
 // New returns a new Server object.
-func New(store *db.Store) *Server {
+func New(store db.Store) *Server {
 	server := &Server{
 		store: store,
 	}
@@ -24,6 +24,7 @@ func New(store *db.Store) *Server {
 	r.POST("/accounts", server.createAccount)
 	r.GET("/accounts/:id", server.getAccount)
 	r.GET("/accounts", server.listAccounts)
+	r.POST("/transfers", server.createTransfer)
 
 	server.router = r
 

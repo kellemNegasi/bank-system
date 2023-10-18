@@ -8,22 +8,27 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// Store extends the functionalities of Queries and adds the capability of running SQL transactions
-type Store struct {
+type Store interface {
+	Querier
+	TransferTx(ctx context.Context, args TransferTxParams) (TransferTxResult, error)
+}
+
+// SQLStore implements the Store interface with SQL queries and transactions.
+type SQLStore struct {
 	*Queries
 	db *sql.DB
 }
 
 // NewStore returns a Store object.
-func NewStore(db *sql.DB) *Store {
-	return &Store{
+func NewStore(db *sql.DB) Store {
+	return &SQLStore{
 		Queries: New(db),
 		db:      db,
 	}
 }
 
 // executeTx executes the provided callback function inside a database transaction.
-func (st *Store) executeTx(ctx context.Context, fn func(*Queries) error) error {
+func (st *SQLStore) executeTx(ctx context.Context, fn func(*Queries) error) error {
 	tx, err := st.db.Begin()
 	if err != nil {
 		return err
@@ -61,7 +66,7 @@ type TransferTxResult struct {
 }
 
 // TransferTx executes the transfer transaction.
-func (st *Store) TransferTx(ctx context.Context, args TransferTxParams) (TransferTxResult, error) {
+func (st *SQLStore) TransferTx(ctx context.Context, args TransferTxParams) (TransferTxResult, error) {
 	var txResult TransferTxResult
 
 	cbFunc := func(q *Queries) error {
