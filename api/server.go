@@ -27,6 +27,7 @@ func New(store db.Store) *Server {
 	}
 
 	// register handlers
+	r.POST("/users", server.createUser)
 	r.POST("/accounts", server.createAccount)
 	r.GET("/accounts/:id", server.getAccount)
 	r.GET("/accounts", server.listAccounts)
