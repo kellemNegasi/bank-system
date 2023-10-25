@@ -12,8 +12,9 @@ import (
 )
 
 func createRandomAccount(t *testing.T) Account {
+	user := createRandomUser(t)
 	args := CreateAccountParams{
-		Owner:    util.RandString(6),
+		Owner:    user.Username,
 		Balance:  fmt.Sprint(util.RandInt(200, 400)),
 		Currency: util.RandCurrency(),
 	}

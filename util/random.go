@@ -44,3 +44,7 @@ func RandomFloat(min, max float64) float64 {
 func RandomMoney(min, max float64) string {
 	return fmt.Sprintf("%.2f", RandomFloat(min, max))
 }
+
+func RandomEmail() string {
+	return RandString(8) + "@" + RandString(5) + "." + RandString(3)
+}
