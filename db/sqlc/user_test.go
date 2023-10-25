@@ -12,7 +12,7 @@ import (
 func createRandomUser(t *testing.T) User {
 	args := CreateUserParams{
 		Username:       util.RandomOwner(),
-		HashedPassword: util.RandString(6),
+		HashedPassword: "secret",
 		FullName:       util.RandomOwner(),
 		Email:          util.RandomEmail(),
 	}
