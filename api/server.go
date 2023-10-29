@@ -5,11 +5,13 @@ import (
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
 	db "github.com/kellemNegasi/bank-system/db/sqlc"
+	token "github.com/kellemNegasi/bank-system/token/pasto"
 )
 
 // Server represents the HTTP server that serves client requests.
 type Server struct {
 	store  db.Store
+	Maker  token.PasetoMaker
 	router *gin.Engine
 }
 
