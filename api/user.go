@@ -19,7 +19,7 @@ type createUserRequest struct {
 	Email    string `json:"email" binding:"required,email"`
 }
 
-type createUserResponse struct {
+type userResponse struct {
 	Username          string    `json:"username"`
 	FullName          string    `json:"full_name"`
 	Email             string    `json:"email"`
@@ -27,8 +27,16 @@ type createUserResponse struct {
 	CreatedAt         time.Time `json:"created_at"`
 }
 
-type getUserRequest struct {
-	User string `json:"username" binding:"required"`
+func newUserResponse(user db.User) userResponse {
+	response := userResponse{
+		Username:          user.Username,
+		Email:             user.Email,
+		FullName:          user.FullName,
+		PasswordChangedAt: user.PasswordChangedAt,
+		CreatedAt:         user.CreatedAt,
+	}
+
+	return response
 }
 
 func (server *Server) createUser(ctx *gin.Context) {
@@ -66,25 +74,29 @@ func (server *Server) createUser(ctx *gin.Context) {
 		return
 	}
 
-	response := createUserResponse{
-		Username:          user.Username,
-		Email:             user.Email,
-		FullName:          user.FullName,
-		PasswordChangedAt: user.PasswordChangedAt,
-		CreatedAt:         user.CreatedAt,
-	}
+	resp := newUserResponse(user)
 
-	ctx.JSON(http.StatusOK, response)
+	ctx.JSON(http.StatusOK, resp)
 }
 
-func (server *Server) getUser(ctx *gin.Context) {
-	var req getAccountRequest
-	if err := ctx.ShouldBindUri(&req); err != nil {
+type loginUserRequest struct {
+	Username string `json:"username" binding:"required,alphanum"`
+	Password string `json:"password" binding:"required,min=6"`
+}
+
+type loginUserResponse struct {
+	AccessToken string       `json:"access_token"`
+	User        userResponse `json:"user"`
+}
+
+func (server *Server) loginUser(ctx *gin.Context) {
+	var req loginUserRequest
+	if err := ctx.BindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
 		return
 	}
 
-	account, err := server.store.GetAccount(ctx, req.ID)
+	user, err := server.store.GetUser(ctx, req.Username)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
@@ -94,5 +106,21 @@ func (server *Server) getUser(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, account)
+	err = util.CheckPassword(req.Password, user.HashedPassword)
+	if err != nil {
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+		return
+	}
+
+	accessToken, err := server.Maker.CreateToken(user.Username, server.config.AccessTokenDuration)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+
+	resp := loginUserResponse{
+		AccessToken: accessToken,
+		User:        newUserResponse(user),
+	}
+	ctx.JSON(http.StatusOK, resp)
 }

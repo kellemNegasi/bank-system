@@ -6,38 +6,35 @@ import (
 	"github.com/go-playground/validator/v10"
 	db "github.com/kellemNegasi/bank-system/db/sqlc"
 	token "github.com/kellemNegasi/bank-system/token/pasto"
+	"github.com/kellemNegasi/bank-system/util"
 )
 
 // Server represents the HTTP server that serves client requests.
 type Server struct {
+	config util.Config
 	store  db.Store
-	Maker  token.PasetoMaker
+	Maker  *token.PasetoMaker
 	router *gin.Engine
 }
 
 // New returns a new Server object.
-func New(store db.Store) *Server {
-	server := &Server{
-		store: store,
-	}
+func New(config util.Config, store db.Store) (*Server, error) {
 
-	// Create a default router
-	r := gin.Default()
+	tokenMaker, err := token.NewPastoMaker(config.TokenSymmetricKey)
+	if err != nil {
+		return nil, err
+	}
+	server := &Server{
+		config: config,
+		Maker:  tokenMaker,
+		store:  store,
+	}
 
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
 		v.RegisterValidation("currency", validCurrency)
 	}
-
-	// register handlers
-	r.POST("/users", server.createUser)
-	r.POST("/accounts", server.createAccount)
-	r.GET("/accounts/:id", server.getAccount)
-	r.GET("/accounts", server.listAccounts)
-	r.POST("/transfers", server.createTransfer)
-
-	server.router = r
-
-	return server
+	server.setupRoutes()
+	return server, err
 }
 
 func (server *Server) Start(address string) error {
