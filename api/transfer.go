@@ -2,11 +2,13 @@ package api
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	db "github.com/kellemNegasi/bank-system/db/sqlc"
+	token "github.com/kellemNegasi/bank-system/token/pasto"
 	"github.com/shopspring/decimal"
 )
 
@@ -31,11 +33,21 @@ func (server *Server) createTransfer(ctx *gin.Context) {
 		return
 	}
 
-	if !server.isValidAccount(ctx, req.FromAccountID, req.Currency, true, req.Amount) {
+	fromAccount, valid := server.isValidAccount(ctx, req.FromAccountID, req.Currency, true, req.Amount)
+
+	if !valid {
 		return
 	}
 
-	if !server.isValidAccount(ctx, req.ToAccountID, req.Currency, false, nil) {
+	payload := ctx.MustGet(authorizationPayloadKey).(*token.PasetoPayload)
+	if fromAccount.Owner != payload.Username {
+		err := errors.New("from account doesn't belong to the authenticated user")
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+		return
+	}
+
+	_, valid = server.isValidAccount(ctx, req.ToAccountID, req.Currency, false, nil)
+	if !valid {
 		return
 	}
 
@@ -54,22 +66,22 @@ func (server *Server) createTransfer(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, result)
 }
 
-func (server *Server) isValidAccount(ctx *gin.Context, accountID int64, currency string, checkBalance bool, amount *decimal.Decimal) bool {
+func (server *Server) isValidAccount(ctx *gin.Context, accountID int64, currency string, checkBalance bool, amount *decimal.Decimal) (db.Account, bool) {
 	account, err := server.store.GetAccount(ctx, accountID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			ctx.JSON(http.StatusNotFound, errorResponse(err))
-			return false
+			return account, false
 		}
 
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-		return false
+		return account, false
 	}
 
 	if account.Currency != currency {
 		err = fmt.Errorf("currency mismatch. currency %s vs  currency %s. \n account id %d", account.Currency, currency, accountID)
 		ctx.JSON(http.StatusBadRequest, errorResponse(err))
-		return false
+		return account, false
 	}
 
 	if checkBalance && amount != nil {
@@ -77,15 +89,15 @@ func (server *Server) isValidAccount(ctx *gin.Context, accountID int64, currency
 		Balance, err := decimal.NewFromString(account.Balance)
 		if err != nil {
 			ctx.JSON(http.StatusInternalServerError, errorResponse(err))
-			return false
+			return account, false
 		}
 
 		if Balance.LessThan(*amount) {
 			err = fmt.Errorf("insufficient balance in account %d for transfer", accountID)
 			ctx.JSON(http.StatusBadRequest, errorResponse(err))
-			return false
+			return account, false
 		}
 	}
 
-	return true
+	return account, true
 }

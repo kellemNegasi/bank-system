@@ -17,7 +17,6 @@ func addAuth(t *testing.T, maker token.PasetoMaker, req *http.Request, duration 
 	require.NoError(t, err)
 	authorizationHeader := fmt.Sprintf("%s %s", authHeaderType, token)
 	req.Header.Set(authorizationHeaderKey, authorizationHeader)
-
 }
 
 func TestMiddleWare(t *testing.T) {
